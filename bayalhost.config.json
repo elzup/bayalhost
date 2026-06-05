@@ -17,6 +17,14 @@
       "envFile": "",
       "type": "static",
       "enabled": true
+    },
+    {
+      "name": "daily-report-ai",
+      "source": "/Users/hiro/.ghq/github.com/elzup/daily-report-ai",
+      "artifact": "/Users/hiro/.ghq/github.com/elzup/bayalhost/artifacts/daily-report-ai",
+      "envFile": "",
+      "type": "static",
+      "enabled": true
     }
   ]
 }

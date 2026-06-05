@@ -1,6 +1,9 @@
 sites/*
 !sites/.gitkeep
 
+artifacts/*
+!artifacts/.gitkeep
+
 .env
 .env.*
 !.env.example
