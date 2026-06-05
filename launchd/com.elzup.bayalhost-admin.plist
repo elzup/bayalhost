@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.elzup.bayalhost-admin</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/node</string>
+    <string>/Users/hiro/.ghq/github.com/elzup/bayalhost/scripts/admin-server.mjs</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/hiro/.ghq/github.com/elzup/bayalhost</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>BAYALHOST_ADMIN_PORT</key>
+    <string>8918</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/bayalhost-admin.out.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/tmp/bayalhost-admin.err.log</string>
+</dict>
+</plist>

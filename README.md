@@ -14,6 +14,26 @@ Use wildcard DNS for the host PC:
 *.bayalhost -> <host-pc-ip>
 ```
 
+For many projects on macOS, use `dnsmasq` instead of adding every hostname to
+`/etc/hosts`:
+
+```bash
+./scripts/setup-dnsmasq-macos.sh
+```
+
+This creates:
+
+```text
+/opt/homebrew/etc/dnsmasq.d/bayalhost.conf
+/etc/resolver/bayalhost
+```
+
+Result:
+
+```text
+*.bayalhost -> 127.0.0.1
+```
+
 Each project is served by subdomain:
 
 ```text
@@ -27,6 +47,15 @@ https://foo.bayalhost
 https://admin.bayalhost
 https://landing.bayalhost
 ```
+
+Admin UI:
+
+```text
+https://admin.bayalhost
+```
+
+`admin.bayalhost` is reserved for project registration, scan results, and
+deploy actions. Registered projects use `<project>.bayalhost`.
 
 ## Directory Layout
 
@@ -92,6 +121,33 @@ Validate registered projects:
 
 ```bash
 ./scripts/bayalhost.mjs validate
+```
+
+## Admin UI
+
+Run the lightweight admin server:
+
+```bash
+./scripts/admin-server.mjs
+```
+
+It listens on `127.0.0.1:8918`. Caddy exposes it as:
+
+```text
+https://admin.bayalhost
+```
+
+The admin UI can:
+
+- list registered projects
+- scan configured roots for `out` / `dist` / `build`
+- add or update project registry entries
+- deploy a registered project
+
+Direct fixed-port URL while Caddy is not running:
+
+```text
+http://admin.bayalhost:8918
 ```
 
 ## Deploy A Static Build
@@ -167,6 +223,10 @@ macOS launchd template:
 cp launchd/com.elzup.bayalhost.plist ~/Library/LaunchAgents/
 launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/com.elzup.bayalhost.plist
 launchctl enable "gui/$(id -u)/com.elzup.bayalhost"
+
+cp launchd/com.elzup.bayalhost-admin.plist ~/Library/LaunchAgents/
+launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/com.elzup.bayalhost-admin.plist
+launchctl enable "gui/$(id -u)/com.elzup.bayalhost-admin"
 ```
 
 Logs:
@@ -174,6 +234,8 @@ Logs:
 ```text
 /tmp/bayalhost-caddy.out.log
 /tmp/bayalhost-caddy.err.log
+/tmp/bayalhost-admin.out.log
+/tmp/bayalhost-admin.err.log
 ```
 
 ## Environment Variables
