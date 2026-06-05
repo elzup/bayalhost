@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bayalhost.local/schemas/bayalhost.schema.json",
+  "title": "Bayalhost Config",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["domain", "host", "scanRoots", "projects"],
+  "properties": {
+    "domain": {
+      "type": "string",
+      "pattern": "^[a-z0-9.-]+$"
+    },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["server", "runtime"],
+      "properties": {
+        "server": {
+          "type": "string",
+          "enum": ["caddy"]
+        },
+        "runtime": {
+          "type": "string",
+          "enum": ["native", "docker"]
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "scanRoots": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/project"
+      },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "source", "artifact", "type", "enabled"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact": {
+          "type": "string",
+          "minLength": 1
+        },
+        "envFile": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["static"]
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

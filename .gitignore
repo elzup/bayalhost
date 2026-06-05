@@ -1,0 +1,8 @@
+sites/*
+!sites/.gitkeep
+
+.env
+.env.*
+!.env.example
+
+.DS_Store

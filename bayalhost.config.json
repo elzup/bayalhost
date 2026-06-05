@@ -1,0 +1,22 @@
+{
+  "$schema": "./schemas/bayalhost.schema.json",
+  "domain": "bayalhost",
+  "host": {
+    "server": "caddy",
+    "runtime": "native",
+    "notes": "Use native Caddy unless middleware or isolation requirements justify Docker."
+  },
+  "scanRoots": [
+    "/Users/hiro/.ghq/github.com/elzup"
+  ],
+  "projects": [
+    {
+      "name": "comemiru",
+      "source": "/Users/hiro/.ghq/github.com/elzup/comemiru",
+      "artifact": "/Users/hiro/.ghq/github.com/elzup/comemiru/out",
+      "envFile": "",
+      "type": "static",
+      "enabled": true
+    }
+  ]
+}
