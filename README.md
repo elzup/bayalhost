@@ -1,4 +1,7 @@
-# bayalhost
+<div align="center">
+  <img src="assets/icon.png" alt="bayalhost logo" width="128" height="128">
+  <h1>bayalhost</h1>
+</div>
 
 Host local static builds between `nr dev` and production.
 
@@ -124,6 +127,8 @@ Validate registered projects:
 ```
 
 ## Admin UI
+
+![bayalhost admin UI](assets/admin-screenshot.png)
 
 Run the lightweight admin server:
 
