@@ -1,0 +1,22 @@
+{
+  "$schema": "./schemas/bayalhost.schema.json",
+  "domain": "bayalhost",
+  "host": {
+    "server": "caddy",
+    "runtime": "native",
+    "notes": "Use native Caddy unless middleware or isolation requirements justify Docker."
+  },
+  "scanRoots": [
+    "~/projects"
+  ],
+  "projects": [
+    {
+      "name": "myapp",
+      "source": "~/projects/myapp",
+      "artifact": "~/projects/myapp/out",
+      "envFile": "",
+      "type": "static",
+      "enabled": true
+    }
+  ]
+}

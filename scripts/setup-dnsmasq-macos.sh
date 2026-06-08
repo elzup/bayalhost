@@ -36,5 +36,5 @@ brew services stop dnsmasq >/dev/null 2>&1 || true
 sudo brew services restart dnsmasq
 
 echo "Configured *.bayalhost -> 127.0.0.1"
-echo "Verify direct dnsmasq with: dig @127.0.0.1 comemiru.bayalhost +short"
-echo "Verify macOS resolver with: dscacheutil -q host -a name comemiru.bayalhost"
+echo "Verify direct dnsmasq with: dig @127.0.0.1 myapp.bayalhost +short"
+echo "Verify macOS resolver with: dscacheutil -q host -a name myapp.bayalhost"

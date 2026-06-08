@@ -10,7 +10,9 @@ admin.bayalhost {
 *.bayalhost {
 	tls internal
 
-	root * /Users/hiro/.ghq/github.com/elzup/bayalhost/sites/{labels.1}/current
+	# Resolved against BAYALHOST_ROOT (defaults to Caddy's working directory,
+	# i.e. this repo). The launchd job sets WorkingDirectory to the repo.
+	root * {$BAYALHOST_ROOT:.}/sites/{labels.1}/current
 	encode zstd gzip
 
 	header {

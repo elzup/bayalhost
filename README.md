@@ -3,7 +3,7 @@
   <h1>bayalhost</h1>
 </div>
 
-Host local static builds between `nr dev` and production.
+Host local static builds between your local dev server and production.
 
 This repo is a lightweight static preview host for multiple projects. Each app is
 served from a built `dist` directory on the host PC, without deploying to a
@@ -78,13 +78,18 @@ sites/
 
 ## Project Registry
 
-Projects are registered in `bayalhost.config.json`.
+Copy the example config, then register your projects in
+`bayalhost.config.json` (this file is git-ignored so it stays local):
+
+```bash
+cp bayalhost.config.example.json bayalhost.config.json
+```
 
 ```json
 {
-  "name": "comemiru",
-  "source": "/Users/hiro/.ghq/github.com/elzup/comemiru",
-  "artifact": "/Users/hiro/.ghq/github.com/elzup/comemiru/out",
+  "name": "myapp",
+  "source": "~/projects/myapp",
+  "artifact": "~/projects/myapp/out",
   "envFile": "",
   "type": "static",
   "enabled": true
@@ -110,14 +115,14 @@ Scan candidates under configured `scanRoots`:
 Add or update a project:
 
 ```bash
-./scripts/bayalhost.mjs add comemiru /Users/hiro/.ghq/github.com/elzup/comemiru/out \
-  --source /Users/hiro/.ghq/github.com/elzup/comemiru
+./scripts/bayalhost.mjs add myapp ~/projects/myapp/out \
+  --source ~/projects/myapp
 ```
 
 Deploy from the registry:
 
 ```bash
-./scripts/bayalhost.mjs deploy comemiru
+./scripts/bayalhost.mjs deploy myapp
 ```
 
 Validate registered projects:
@@ -163,16 +168,16 @@ From this repo:
 ./scripts/deploy-dist.sh <project> /path/to/project/dist
 ```
 
-For example, a Next static export such as `elzup/comemiru/out`:
+For example, a Next.js static export at `~/projects/myapp/out`:
 
 ```bash
-./scripts/deploy-dist.sh comemiru /Users/hiro/.ghq/github.com/elzup/comemiru/out
+./scripts/deploy-dist.sh myapp ~/projects/myapp/out
 ```
 
 That serves:
 
 ```text
-https://comemiru.bayalhost
+https://myapp.bayalhost
 ```
 
 With runtime environment variables:
@@ -222,16 +227,16 @@ Use Docker only when the middleware becomes meaningful:
 - A project requires process isolation.
 - Reproducible runtime packaging matters more than idle resource usage.
 
-macOS launchd template:
+macOS launchd auto-start. The plists under `launchd/` are templates that use a
+`__REPO_DIR__` placeholder; the install script substitutes the real repo path
+before loading them:
 
 ```bash
-cp launchd/com.elzup.bayalhost.plist ~/Library/LaunchAgents/
-launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/com.elzup.bayalhost.plist
-launchctl enable "gui/$(id -u)/com.elzup.bayalhost"
+# admin only (default)
+./scripts/install-launchd.sh admin
 
-cp launchd/com.elzup.bayalhost-admin.plist ~/Library/LaunchAgents/
-launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/com.elzup.bayalhost-admin.plist
-launchctl enable "gui/$(id -u)/com.elzup.bayalhost-admin"
+# admin + Caddy
+./scripts/install-launchd.sh all
 ```
 
 Logs:
@@ -248,8 +253,8 @@ Logs:
 Static sites cannot read server process environment variables after build. Use
 one of these patterns:
 
-- Build-time env: set env vars before `nr build`; simplest, but every change
-  requires rebuilding.
+- Build-time env: set env vars before the project build; simplest, but every
+  change requires rebuilding.
 - Runtime env: pass an env file to `deploy-dist.sh`; it generates `env.js`, and
   changing env only requires re-running deploy.
 

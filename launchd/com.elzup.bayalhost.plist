@@ -11,13 +11,13 @@
     <string>/opt/homebrew/bin/caddy</string>
     <string>run</string>
     <string>--config</string>
-    <string>/Users/hiro/.ghq/github.com/elzup/bayalhost/Caddyfile</string>
+    <string>__REPO_DIR__/Caddyfile</string>
     <string>--adapter</string>
     <string>caddyfile</string>
   </array>
 
   <key>WorkingDirectory</key>
-  <string>/Users/hiro/.ghq/github.com/elzup/bayalhost</string>
+  <string>__REPO_DIR__</string>
 
   <key>RunAtLoad</key>
   <true/>

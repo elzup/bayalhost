@@ -9,11 +9,11 @@
   <key>ProgramArguments</key>
   <array>
     <string>/opt/homebrew/bin/node</string>
-    <string>/Users/hiro/.ghq/github.com/elzup/bayalhost/scripts/admin-server.mjs</string>
+    <string>__REPO_DIR__/scripts/admin-server.mjs</string>
   </array>
 
   <key>WorkingDirectory</key>
-  <string>/Users/hiro/.ghq/github.com/elzup/bayalhost</string>
+  <string>__REPO_DIR__</string>
 
   <key>EnvironmentVariables</key>
   <dict>

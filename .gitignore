@@ -1,3 +1,6 @@
+# Local registry (contains machine-specific paths); use bayalhost.config.example.json
+bayalhost.config.json
+
 sites/*
 !sites/.gitkeep
 
