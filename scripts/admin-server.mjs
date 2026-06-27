@@ -173,6 +173,8 @@ const sendFile = (response, filePath) => {
 
   response.writeHead(200, {
     'content-type': contentType,
+    // live プロジェクトの out/ は cron で更新されるため、ブラウザにキャッシュさせない。
+    'cache-control': 'no-store',
   });
   createReadStream(filePath).pipe(response);
 };
@@ -195,6 +197,12 @@ const getProjectRoot = (projectName) => {
 
   if (!project) {
     return null;
+  }
+
+  // live プロジェクトは deploy スナップショットを使わず artifact を直配信する
+  // (cron で out/ が頻繁に更新されるので、毎回 deploy せず即反映させる)。
+  if (project.live) {
+    return project.artifact;
   }
 
   const deployedRoot = path.join(repoDir, 'sites', project.name, 'current');

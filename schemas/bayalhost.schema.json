@@ -70,6 +70,10 @@
         },
         "enabled": {
           "type": "boolean"
+        },
+        "live": {
+          "type": "boolean",
+          "description": "true なら deploy スナップショット (sites/<name>/current) を無視し、artifact を直配信する。生成物が cron で頻繁に更新されるプロジェクト向け。"
         }
       }
     }
