@@ -41,6 +41,14 @@
         "$ref": "#/$defs/project"
       },
       "uniqueItems": true
+    },
+    "publicHosts": {
+      "type": "object",
+      "description": "公開ホスト名 (トンネルの hostname 等) → project 名 のマッピング。ここに載ったホスト経由のアクセスだけ project.auth のトークンゲート対象になる。",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-z0-9-]+$"
+      }
     }
   },
   "$defs": {
@@ -74,6 +82,27 @@
         "live": {
           "type": "boolean",
           "description": "true なら deploy スナップショット (sites/<name>/current) を無視し、artifact を直配信する。生成物が cron で頻繁に更新されるプロジェクト向け。"
+        },
+        "auth": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["token", "redirect"],
+          "description": "公開ホスト (publicHosts) 経由のアクセスにだけ効くトークンゲート。?token= 一致で cookie を焼き、以降そのブラウザは素通り。未認証は redirect へ飛ばす。ローカル (*.bayalhost) は対象外。",
+          "properties": {
+            "token": {
+              "type": "string",
+              "minLength": 16,
+              "description": "推測不可能な共有トークン。config は gitignored なので直書き可。"
+            },
+            "redirect": {
+              "type": "string",
+              "description": "未認証アクセスの飛ばし先 (例: 自分だけ見える Notion の秘密ページ。ここに token 付き URL を置く)。"
+            },
+            "cookieName": {
+              "type": "string",
+              "description": "cookie 名 (既定 bh_auth)。"
+            }
+          }
         }
       }
     }

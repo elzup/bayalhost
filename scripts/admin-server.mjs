@@ -209,7 +209,53 @@ const getProjectRoot = (projectName) => {
   return existsSync(deployedRoot) ? deployedRoot : project.artifact;
 };
 
-const serveProject = (request, response, projectName, pathname) => {
+const parseCookies = (header) => {
+  const out = {};
+  for (const part of (header ?? '').split(';')) {
+    const eq = part.indexOf('=');
+    if (eq < 0) continue;
+    out[part.slice(0, eq).trim()] = decodeURIComponent(part.slice(eq + 1).trim());
+  }
+  return out;
+};
+
+// トークンゲート。cookie 済みなら通す。?token=... 一致なら cookie を焼いて綺麗な URL へ。
+// それ以外は redirect (未認証の入口を秘密ページへ飛ばす) 用に false を返す。
+// 戻り値 true=このまま配信続行 / false=応答済み(呼び出し側は return)。
+const passAuth = (request, response, auth, url) => {
+  const cookieName = auth.cookieName ?? 'bh_auth';
+  const cookies = parseCookies(request.headers.cookie);
+  if (cookies[cookieName] === auth.token) return true;
+
+  if (url.searchParams.get('token') === auth.token) {
+    response.writeHead(302, {
+      // Secure: トンネル(HTTPS)経由でのみ焼かれる。1年保持でブラウザごとに一度きり。
+      'set-cookie': `${cookieName}=${encodeURIComponent(auth.token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000`,
+      location: url.pathname, // token を落とした綺麗な URL へ
+      'cache-control': 'no-store',
+    });
+    response.end();
+    return false;
+  }
+
+  response.writeHead(302, { location: auth.redirect, 'cache-control': 'no-store' });
+  response.end();
+  return false;
+};
+
+const serveProject = (request, response, projectName, url, viaPublic) => {
+  const pathname = url.pathname;
+
+  // 公開ホスト経由のみゲート。ローカル (*.bayalhost) は従来どおり素通り。
+  if (viaPublic) {
+    const project = readConfig().projects.find(
+      (currentProject) => currentProject.name === projectName && currentProject.enabled,
+    );
+    if (project?.auth && !passAuth(request, response, project.auth, url)) {
+      return;
+    }
+  }
+
   const projectRoot = getProjectRoot(projectName);
 
   if (!projectRoot) {
@@ -286,10 +332,22 @@ const handleAdminAsset = (response, pathname) => {
 const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'admin.bayalhost'}`);
-    const projectName = getProjectNameFromHost(request.headers.host);
+    let projectName = getProjectNameFromHost(request.headers.host);
+    let viaPublic = false;
+
+    // トンネル等の公開ホスト (例 quota.example.com) は publicHosts で project に対応づけ、
+    // そのアクセスにだけトークンゲートを効かせる (*.bayalhost のローカルアクセスは対象外)。
+    if (!projectName) {
+      const hostname = (request.headers.host ?? '').split(':')[0].toLowerCase();
+      const mapped = readConfig().publicHosts?.[hostname];
+      if (mapped) {
+        projectName = mapped;
+        viaPublic = true;
+      }
+    }
 
     if (projectName && projectName !== 'admin') {
-      serveProject(request, response, projectName, url.pathname);
+      serveProject(request, response, projectName, url, viaPublic);
       return;
     }
 
