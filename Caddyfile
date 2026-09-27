@@ -7,6 +7,40 @@ admin.bayalhost {
 	reverse_proxy 127.0.0.1:8918
 }
 
+# Worklog dashboard (dash-viz)。?repo=<owner>/<repo> で各リポの作業ログを描く。
+# events.jsonl には仕事の QA も入るので、この Mac からの接続以外は切る。
+# route で囲むのは、abort を handle より先に確実に評価させるため (既定の directive 順では後になる)
+dash.bayalhost {
+	tls internal
+
+	route {
+		@remote not remote_ip 127.0.0.1/8 ::1
+		abort @remote
+
+		# /data/<host>/<owner>/<repo>/events.jsonl -> <GHQ_ROOT>/<host>/<owner>/<repo>/.metarc/log/events.jsonl
+		# 配るのはこのファイルだけ。先頭 . のセグメントを弾き、リポの他の中身には届かせない。
+		# GHQ_ROOT の既定値は WorkingDirectory (このリポ) の 3 階層上。ghq の <root>/<host>/<owner>/<repo> 配置が前提
+		handle_path /data/* {
+			@log path_regexp log ^/([A-Za-z0-9_][A-Za-z0-9._-]*)/([A-Za-z0-9_][A-Za-z0-9._-]*)/([A-Za-z0-9_][A-Za-z0-9._-]*)/events\.jsonl$
+			handle @log {
+				root * {$GHQ_ROOT:../../..}
+				rewrite * /{re.log.1}/{re.log.2}/{re.log.3}/.metarc/log/events.jsonl
+				header Cache-Control "no-store"
+				file_server
+			}
+			handle {
+				respond 404
+			}
+		}
+
+		handle {
+			root * {$BAYALHOST_ROOT:.}/sites/dash/current
+			try_files {path} /index.html
+			file_server
+		}
+	}
+}
+
 *.bayalhost {
 	tls internal
 
