@@ -2,8 +2,17 @@
 	admin off
 }
 
+# *.bayalhost は TLD 直下のワイルドカードなのでブラウザも curl も SAN として認めない。
+# さらに Caddy はワイルドカードが覆う名前 (admin / dash) の個別証明書を発行しないため、
+# 全ブロックを on_demand にしてアクセスされたホスト名ごとに証明書を発行させる
+(local_tls) {
+	tls internal {
+		on_demand
+	}
+}
+
 admin.bayalhost {
-	tls internal
+	import local_tls
 	reverse_proxy 127.0.0.1:8918
 }
 
@@ -11,7 +20,7 @@ admin.bayalhost {
 # events.jsonl には仕事の QA も入るので、この Mac からの接続以外は切る。
 # route で囲むのは、abort を handle より先に確実に評価させるため (既定の directive 順では後になる)
 dash.bayalhost {
-	tls internal
+	import local_tls
 
 	route {
 		@remote not remote_ip 127.0.0.1/8 ::1
@@ -42,7 +51,7 @@ dash.bayalhost {
 }
 
 *.bayalhost {
-	tls internal
+	import local_tls
 
 	# Resolved against BAYALHOST_ROOT (defaults to Caddy's working directory,
 	# i.e. this repo). The launchd job sets WorkingDirectory to the repo.
