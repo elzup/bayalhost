@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Install bayalhost launchd services on macOS.
 #   ./scripts/install-launchd.sh [admin|all]
-#     admin (default) -> admin-server only (http://admin.bayalhost:8918)
+#     admin (default) -> admin-server only (127.0.0.1:8918, behind Caddy)
 #     all             -> admin-server + Caddy (https://*.bayalhost)
 #
 # The plists under launchd/ are templates using a __REPO_DIR__ placeholder.

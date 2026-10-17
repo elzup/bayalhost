@@ -332,6 +332,15 @@ const handleAdminAsset = (response, pathname) => {
 const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'admin.bayalhost'}`);
+
+    // <name>.bayalhost:<port> は Caddy を迂回した平文の直アクセス。正規の入口 (Caddy の TLS 終端) へ寄せる。
+    // Caddy は Host をポート無しで転送してくるので、ここに来るのは直アクセスだけ
+    if (url.port && url.hostname.endsWith('.bayalhost')) {
+      response.writeHead(308, { location: `https://${url.hostname}${url.pathname}${url.search}` });
+      response.end();
+      return;
+    }
+
     let projectName = getProjectNameFromHost(request.headers.host);
     let viaPublic = false;
 
