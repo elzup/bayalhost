@@ -52,6 +52,18 @@ fi
 
 ln -sfn "releases/$timestamp" "$project_dir/current"
 
+# 古い release を削除する。deploy は launchd から 15 分間隔で回るので、prune が無いと
+# 1 日あたり (dist サイズ × 96) が無停止で積み上がる。quota で実害が出ている:
+# 11 日間 831 世代 166GB (出典: pc-help-report reports/incident/bayalhost-release-pileup.md)
+keep="${BAYALHOST_KEEP_RELEASES:-5}"
+find "$project_dir/releases" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; \
+  | sort -r | tail -n "+$((keep + 1))" | while IFS= read -r old; do
+      # 今デプロイした世代は keep 数に関係なく必ず残す
+      [ "$old" = "$timestamp" ] && continue
+      rm -rf -- "$project_dir/releases/$old"
+      echo "Pruned release: $old"
+    done
+
 echo "Deployed $project"
 echo "Release: $release_dir"
 echo "URL: https://$project.bayalhost"
