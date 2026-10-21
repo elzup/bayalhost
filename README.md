@@ -76,6 +76,16 @@ sites/
 
 `current` is switched atomically after a new `dist` copy is complete.
 
+`sites/<project>/current` is the only thing Caddy and the admin server serve.
+What it points to is derived from the config by `bayalhost.mjs sync`, so never
+edit it by hand:
+
+| config | `current` points to |
+|---|---|
+| `"live": true` | the `artifact` directory itself (changes show up without deploy) |
+| default | `releases/<timestamp>`, a snapshot taken by `deploy` |
+| `"enabled": false` | nothing (removed) |
+
 ## Project Registry
 
 Copy the example config, then register your projects in
@@ -100,10 +110,18 @@ The schema is [schemas/bayalhost.schema.json](schemas/bayalhost.schema.json).
 
 ## CLI
 
-List registered projects:
+List registered projects with what is being served (`OUT-OF-SYNC` means
+`sites/` does not match the config, `STALE` means the artifact is newer than
+the deployed snapshot):
 
 ```bash
 ./scripts/bayalhost.mjs list
+```
+
+Make `sites/` match the config (also runs on admin server start and on save):
+
+```bash
+./scripts/bayalhost.mjs sync
 ```
 
 Scan candidates under configured `scanRoots`:

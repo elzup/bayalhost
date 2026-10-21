@@ -9,6 +9,7 @@
   --bh-text-muted: #4f5b6b;
   --bh-accent: #1668dc;
   --bh-success: #375a22;
+  --bh-warn: #b42318;
   --bh-chip: #e9eef7;
   --bh-radius: 6px;
   --bh-radius-lg: 8px;
@@ -153,6 +154,11 @@ a {
   font-size: 12px;
 }
 
+.bh-warn {
+  color: var(--bh-warn);
+  font-size: 12px;
+}
+
 .bh-message {
   margin-top: 12px;
   min-height: 20px;
@@ -185,6 +191,7 @@ a {
     --bh-text-muted: #aab4c3;
     --bh-chip: #263246;
     --bh-success: #9ed47d;
+    --bh-warn: #ff8a7a;
   }
 
   .bh-table th,

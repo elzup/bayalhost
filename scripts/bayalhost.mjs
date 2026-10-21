@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { spawnSync } from 'node:child_process';
 import {
   existsSync,
   readdirSync,
@@ -10,6 +9,7 @@ import {
 } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runDeploy, siteStatus, syncProject, syncSites } from './sites.mjs';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const scriptDir = path.dirname(scriptPath);
@@ -23,6 +23,7 @@ const printUsage = () => {
   scripts/bayalhost.mjs scan [root]
   scripts/bayalhost.mjs add <name> <artifact-path> [--source <path>] [--env <path>]
   scripts/bayalhost.mjs deploy <name>
+  scripts/bayalhost.mjs sync        # make sites/<name>/current match the config
   scripts/bayalhost.mjs validate
 `);
 };
@@ -79,8 +80,7 @@ const listProjects = () => {
   const config = readConfig();
 
   for (const project of config.projects) {
-    const status = project.enabled ? 'enabled' : 'disabled';
-    console.log(`${project.name}\t${status}\t${project.artifact}`);
+    console.log(`${project.name}\t${describeStatus(project)}\t${project.artifact}`);
   }
 };
 
@@ -154,7 +154,9 @@ const addProject = (args) => {
 
   const config = readConfig();
   const existingIndex = config.projects.findIndex((project) => project.name === name);
+  // 既存エントリの live / auth 等、フォームで扱わないフィールドを落とさない
   const project = {
+    ...config.projects[existingIndex],
     name,
     source: path.resolve(options.source ?? path.dirname(artifactPath)),
     artifact: artifactPath,
@@ -169,6 +171,7 @@ const addProject = (args) => {
 
   writeJson(configPath, { ...config, projects });
   console.log(`${existingIndex === -1 ? 'Added' : 'Updated'} ${name}`);
+  console.log(syncProject(project) ?? `${name}: sites/ already up to date`);
 };
 
 const deployProject = (name) => {
@@ -189,15 +192,31 @@ const deployProject = (name) => {
 
   assertArtifact(project.artifact);
 
-  const deployScript = path.join(scriptDir, 'deploy-dist.sh');
-  const args = project.envFile
-    ? [deployScript, project.name, project.artifact, project.envFile]
-    : [deployScript, project.name, project.artifact];
-  const result = spawnSync(args[0], args.slice(1), { stdio: 'inherit' });
-
-  if (result.status !== 0) {
-    throw new Error(`deploy failed: ${name}`);
+  // live は artifact を直配信するので deploy するものが無い。symlink の張り直しだけ行う
+  if (project.live) {
+    console.log(syncProject(project) ?? `${name}: live, already serving ${project.artifact}`);
+    return;
   }
+
+  console.log(runDeploy(project));
+};
+
+const syncAll = () => {
+  const changes = syncSites(readConfig().projects);
+  console.log(changes.length > 0 ? changes.join('\n') : 'OK: sites/ already matches config');
+};
+
+const formatMtime = (mtime) => (mtime === null ? '-' : new Date(mtime).toISOString().slice(0, 16));
+
+const describeStatus = (project) => {
+  const status = siteStatus(project);
+  const flags = [
+    !project.enabled && 'disabled',
+    status.isMissing && 'MISSING',
+    !status.isInSync && 'OUT-OF-SYNC (run sync)',
+    status.isStale && 'STALE (deploy)',
+  ].filter(Boolean);
+  return `${status.mode}\tserved ${formatMtime(status.servedMtime)}\tartifact ${formatMtime(status.artifactMtime)}\t${flags.join(', ') || 'ok'}`;
 };
 
 const validateConfig = () => {
@@ -247,6 +266,11 @@ const main = () => {
 
   if (command === 'deploy') {
     deployProject(args[0]);
+    return;
+  }
+
+  if (command === 'sync') {
+    syncAll();
     return;
   }
 

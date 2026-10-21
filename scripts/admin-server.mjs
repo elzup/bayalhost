@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { spawnSync } from 'node:child_process';
 import {
   existsSync,
   createReadStream,
@@ -12,6 +11,7 @@ import {
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { currentPath, runDeploy, siteStatus, syncProject, syncSites } from './sites.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoDir = path.resolve(scriptDir, '..');
@@ -111,7 +111,9 @@ const addProject = ({ name, source, artifact, envFile }) => {
   assertArtifact(artifactPath);
 
   const config = readConfig();
+  // 既存エントリの live / auth 等、フォームで扱わないフィールドを落とさない
   const nextProject = {
+    ...config.projects.find((project) => project.name === name),
     name,
     source: path.resolve(source || path.dirname(artifactPath)),
     artifact: artifactPath,
@@ -125,22 +127,28 @@ const addProject = ({ name, source, artifact, envFile }) => {
     : [...config.projects, nextProject];
 
   writeConfig({ ...config, projects });
-  return nextProject;
+  return { project: nextProject, sync: syncProject(nextProject) };
 };
 
 const deployProject = (name) => {
   assertProjectName(name);
-  const result = spawnSync(path.join(scriptDir, 'bayalhost.mjs'), ['deploy', name], {
-    cwd: repoDir,
-    encoding: 'utf8',
-  });
+  const project = readConfig().projects.find((currentProject) => currentProject.name === name);
 
-  if (result.status !== 0) {
-    throw new Error(`${result.stdout}\n${result.stderr}`.trim() || `deploy failed: ${name}`);
+  if (!project || !project.enabled) {
+    throw new Error(`project is not registered or disabled: ${name}`);
   }
 
-  return result.stdout.trim();
+  // live は artifact を直配信するので deploy するものが無い。symlink の張り直しだけ行う
+  if (project.live) {
+    return syncProject(project) ?? `${name}: live, already serving ${project.artifact}`;
+  }
+
+  assertArtifact(project.artifact);
+  return runDeploy(project);
 };
+
+const listProjects = () =>
+  readConfig().projects.map((project) => ({ ...project, auth: undefined, site: siteStatus(project) }));
 
 const readBody = async (request) => {
   const chunks = [];
@@ -199,14 +207,9 @@ const getProjectRoot = (projectName) => {
     return null;
   }
 
-  // live プロジェクトは deploy スナップショットを使わず artifact を直配信する
-  // (cron で out/ が頻繁に更新されるので、毎回 deploy せず即反映させる)。
-  if (project.live) {
-    return project.artifact;
-  }
-
-  const deployedRoot = path.join(repoDir, 'sites', project.name, 'current');
-  return existsSync(deployedRoot) ? deployedRoot : project.artifact;
+  // Caddy と同じ入口だけを見る。live / release の切り替えは sites.mjs の sync が current に反映済み
+  const root = currentPath(project.name);
+  return existsSync(root) ? root : null;
 };
 
 const parseCookies = (header) => {
@@ -289,7 +292,7 @@ const serveProject = (request, response, projectName, url, viaPublic) => {
 
 const handleApi = async (request, response, pathname) => {
   if (request.method === 'GET' && pathname === '/api/projects') {
-    sendJson(response, 200, { projects: readConfig().projects });
+    sendJson(response, 200, { projects: listProjects() });
     return;
   }
 
@@ -299,7 +302,7 @@ const handleApi = async (request, response, pathname) => {
   }
 
   if (request.method === 'POST' && pathname === '/api/projects') {
-    sendJson(response, 200, { project: addProject(await readBody(request)) });
+    sendJson(response, 200, addProject(await readBody(request)));
     return;
   }
 
@@ -399,7 +402,7 @@ const html = `<!doctype html>
     <h2 class="bh-section-title">Registered Projects</h2>
     <div class="bh-table-wrap">
       <table class="bh-table">
-        <thead><tr><th>Name</th><th>URL</th><th>Artifact</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>URL</th><th>Artifact</th><th>Serving</th><th></th></tr></thead>
         <tbody id="projects"></tbody>
       </table>
     </div>
@@ -454,12 +457,26 @@ const deploy = async (name) => {
   message(body.output);
   await load();
 };
+const formatTime = (mtime) => mtime === null ? '-' : new Date(mtime).toLocaleString();
+// 配信中と artifact の index.html 更新時刻を並べ、ずれていれば理由を出す
+const renderSite = (project) => {
+  const site = project.site;
+  const warnings = [
+    !project.enabled && 'disabled',
+    site.isMissing && 'not served',
+    !site.isInSync && 'out of sync (restart admin or save)',
+    site.isStale && 'stale: artifact is newer, deploy',
+  ].filter(Boolean);
+  return '<span class="bh-status">' + site.mode + '</span> ' + formatTime(site.servedMtime) +
+    (site.mode === 'release' ? '<br><small>artifact ' + formatTime(site.artifactMtime) + '</small>' : '') +
+    warnings.map((warning) => '<br><strong class="bh-warn">' + warning + '</strong>').join('');
+};
 const renderProjects = (projects) => {
   $('#projects').innerHTML = projects.map((project) => '<tr>' +
     '<td><strong>' + project.name + '</strong></td>' +
     '<td><a href="' + projectUrl(project.name) + '">' + projectUrl(project.name) + '</a></td>' +
     '<td class="bh-path">' + project.artifact + '</td>' +
-    '<td><span class="bh-status">' + (project.enabled ? 'enabled' : 'disabled') + '</span></td>' +
+    '<td>' + renderSite(project) + '</td>' +
     '<td><button class="bh-button" data-deploy="' + project.name + '">Deploy</button></td>' +
     '</tr>').join('');
 };
@@ -493,12 +510,12 @@ $('#project-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(event.target).entries());
   try {
-    await requestJson('/api/projects', {
+    const body = await requestJson('/api/projects', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(data),
     });
-    message('Saved ' + data.name);
+    message('Saved ' + data.name + (body.sync ? ' / ' + body.sync : ''));
     await load();
   } catch (error) {
     message(error.message);
@@ -509,6 +526,11 @@ load().catch((error) => message(error.message));
 </script>
 </body>
 </html>`;
+
+// config を手で編集した後でも、再起動すれば sites/ が追従するようにする
+for (const change of syncSites(readConfig().projects)) {
+  console.log(`sync: ${change}`);
+}
 
 server.listen(port, '127.0.0.1', () => {
   console.log(`bayalhost admin listening on http://127.0.0.1:${port}`);
