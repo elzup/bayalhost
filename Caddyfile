@@ -1,13 +1,26 @@
 {
 	admin off
+
+	# leaf の lifetime は intermediate より短くなければならないので、先に intermediate を延ばす (既定 7d)
+	pki {
+		ca local {
+			intermediate_lifetime 365d
+		}
+	}
 }
 
 # *.bayalhost は TLD 直下のワイルドカードなのでブラウザも curl も SAN として認めない。
 # さらに Caddy はワイルドカードが覆う名前 (admin / dash) の個別証明書を発行しないため、
-# 全ブロックを on_demand にしてアクセスされたホスト名ごとに証明書を発行させる
+# 全ブロックを on_demand にしてアクセスされたホスト名ごとに証明書を発行させる。
+# on_demand の証明書はバックグラウンド更新されずハンドシェイク時にしか更新されない。
+# 既定の 12h だと寝ている間に切れ、TLS セッション再開 (証明書選択を経由しない) で
+# 期限切れのままブラウザに届いて SSL エラーになるので、放置しても切れない長さにする
 (local_tls) {
-	tls internal {
+	tls {
 		on_demand
+		issuer internal {
+			lifetime 90d
+		}
 	}
 }
 
