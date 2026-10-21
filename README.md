@@ -285,6 +285,16 @@ FEATURE_X=true
 
 Lines beginning with `#` are ignored. Values are emitted as strings.
 
+## Development
+
+Enable the pre-commit hook once per clone. It syntax-checks staged `.mjs`,
+`.sh` and `.json` files and validates the `Caddyfile` with `caddy validate`
+and `caddy fmt`:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ## Notes
 
 - Project names must match `[a-z0-9-]+`.

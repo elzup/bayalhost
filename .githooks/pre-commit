@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# ステージ済みファイルの構文だけを確かめる。依存ゼロのリポなので node / bash / caddy 以外は呼ばない
+set -euo pipefail
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+failed=0
+
+for file in $staged; do
+  case "$file" in
+    *.mjs | *.js)
+      node --check "$file" || failed=1
+      ;;
+    *.sh | .githooks/*)
+      bash -n "$file" || failed=1
+      ;;
+    *.json)
+      node -e 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))' "$file" || {
+        echo "invalid JSON: $file" >&2
+        failed=1
+      }
+      ;;
+  esac
+done
+
+if grep -qx 'Caddyfile' <<<"$staged"; then
+  # 稼働中の Caddy に読ませる前に壊れた設定を止める。caddy が無い環境では検査を飛ばす
+  if command -v caddy >/dev/null; then
+    caddy validate --config Caddyfile --adapter caddyfile >/dev/null 2>&1 || {
+      caddy validate --config Caddyfile --adapter caddyfile 2>&1 | tail -3 >&2
+      failed=1
+    }
+    caddy fmt --diff Caddyfile >/dev/null 2>&1 || {
+      echo 'Caddyfile is not formatted: run caddy fmt --overwrite Caddyfile' >&2
+      failed=1
+    }
+  else
+    echo 'caddy not found, skipped Caddyfile validation' >&2
+  fi
+fi
+
+exit "$failed"
