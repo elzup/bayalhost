@@ -29,7 +29,7 @@ admin.bayalhost {
 	reverse_proxy 127.0.0.1:8918
 }
 
-# Worklog dashboard (dash-viz)。?repo=<owner>/<repo> で各リポの作業ログを描く。
+# Worklog dashboard (pdash)。?repo=<owner>/<repo> で各リポの作業ログを描く。
 # events.jsonl には仕事の QA も入るので、この Mac からの接続以外は切る。
 # route で囲むのは、abort を handle より先に確実に評価させるため (既定の directive 順では後になる)
 dash.bayalhost {
