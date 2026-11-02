@@ -89,6 +89,7 @@ dash.bayalhost {
 	@mutable not path /assets/* /_next/static/* /env.js
 	header @mutable Cache-Control "no-cache"
 
-	try_files {path} /index.html
+	# {path}.html は Quartz 等の拡張子無し clean URL 用。実ファイルが無い SPA ルートだけ /index.html に落ちる
+	try_files {path} {path}.html /index.html
 	file_server
 }
